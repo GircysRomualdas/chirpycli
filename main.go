@@ -9,9 +9,9 @@ func main() {
 	apiCfg := apiConfig{}
 	mux := http.NewServeMux()
 	mux.Handle("/app/", apiCfg.middlewareMetricsInc(http.StripPrefix("/app/", http.FileServer(http.Dir(".")))))
-	mux.HandleFunc("/healthz/", handleHealthz)
-	mux.HandleFunc("/metrics", apiCfg.handleGetFileserverHits)
-	mux.HandleFunc("/reset/", apiCfg.handleResetFileserverHits)
+	mux.HandleFunc("GET /api/healthz/", handleHealthz)
+	mux.HandleFunc("GET /admin/metrics", apiCfg.handleGetFileserverHits)
+	mux.HandleFunc("POST /admin/reset", apiCfg.handleResetFileserverHits)
 
 	server := &http.Server{
 		Addr:    ":8080",
@@ -22,10 +22,4 @@ func main() {
 	if err := server.ListenAndServe(); err != nil {
 		fmt.Println("Server error:", err)
 	}
-}
-
-func handleHealthz(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("OK"))
 }
