@@ -6,9 +6,12 @@ import (
 )
 
 func main() {
+	apiCfg := apiConfig{}
 	mux := http.NewServeMux()
-	mux.Handle("/app/", http.StripPrefix("/app/", http.FileServer(http.Dir("."))))
+	mux.Handle("/app/", apiCfg.middlewareMetricsInc(http.StripPrefix("/app/", http.FileServer(http.Dir(".")))))
 	mux.HandleFunc("/healthz/", handleHealthz)
+	mux.HandleFunc("/metrics", apiCfg.handleGetFileserverHits)
+	mux.HandleFunc("/reset/", apiCfg.handleResetFileserverHits)
 
 	server := &http.Server{
 		Addr:    ":8080",
