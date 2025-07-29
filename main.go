@@ -3,10 +3,34 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"os"
+
+	"database/sql"
+
+	"github.com/GircysRomualdas/chirpycli/internal/database"
+	"github.com/joho/godotenv"
+	_ "github.com/lib/pq"
 )
 
 func main() {
-	apiCfg := apiConfig{}
+	if err := godotenv.Load(); err != nil {
+		fmt.Println("Error loading .env file:", err)
+		return
+	}
+	dbURL := os.Getenv("DATABASE_URL")
+	if dbURL == "" {
+		fmt.Println("DATABASE_URL environment variable not set")
+		return
+	}
+	db, err := sql.Open("postgres", dbURL)
+	if err != nil {
+		fmt.Println("Error opening database:", err)
+		return
+	}
+	dbQueries := database.New(db)
+	apiCfg := apiConfig{
+		DB: dbQueries,
+	}
 	mux := http.NewServeMux()
 	mux.Handle("/app/", apiCfg.middlewareMetricsInc(http.StripPrefix("/app/", http.FileServer(http.Dir(".")))))
 
