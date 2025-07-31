@@ -78,12 +78,12 @@ func (cfg *apiConfig) handleCreateChirp(w http.ResponseWriter, r *http.Request) 
 		respondWithError(w, http.StatusBadRequest, "Invalid chirp", err)
 		return
 	}
-	token, err := auth.GetBearerToken(r.Header)
+	tokenJWT, err := auth.GetBearerToken(r.Header)
 	if err != nil {
 		respondWithError(w, http.StatusUnauthorized, "Couldn't get JWT token", err)
 		return
 	}
-	UserID, err := auth.ValidateJWT(token, cfg.JWTSecret)
+	UserID, err := auth.ValidateJWT(tokenJWT, cfg.JWTSecret)
 	if err != nil {
 		respondWithError(w, http.StatusUnauthorized, "Invalid JWT token", err)
 		return
