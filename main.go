@@ -22,6 +22,11 @@ func main() {
 		fmt.Println("DATABASE_URL environment variable not set")
 		return
 	}
+	JWTSecret := os.Getenv("JWT_SECRET")
+	if JWTSecret == "" {
+		fmt.Println("JWT_SECRET environment variable not set")
+		return
+	}
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
 		fmt.Println("Error opening database:", err)
@@ -29,7 +34,8 @@ func main() {
 	}
 	dbQueries := database.New(db)
 	apiCfg := apiConfig{
-		db: dbQueries,
+		db:        dbQueries,
+		JWTSecret: JWTSecret,
 	}
 	mux := http.NewServeMux()
 	mux.Handle("/app/", apiCfg.middlewareMetricsInc(http.StripPrefix("/app/", http.FileServer(http.Dir(".")))))

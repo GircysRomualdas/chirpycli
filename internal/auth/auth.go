@@ -1,7 +1,10 @@
 package auth
 
 import (
+	"errors"
 	"fmt"
+	"net/http"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -20,7 +23,7 @@ func HashPassword(password string) (string, error) {
 func CheckPasswordHash(password, hash string) error {
 	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 	if err != nil {
-		return fmt.Errorf("Password does not match")
+		return errors.New("Password does not match")
 	}
 	return nil
 }
@@ -48,11 +51,23 @@ func ValidateJWT(tokenString, tokenSecret string) (uuid.UUID, error) {
 		return uuid.Nil, fmt.Errorf("Couldn't parse JWT: %v", err)
 	}
 	if !token.Valid {
-		return uuid.Nil, fmt.Errorf("JWT is invalid")
+		return uuid.Nil, errors.New("JWT is invalid")
 	}
 	userID, err := uuid.Parse(claim.Subject)
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("Couldn't parse user ID from JWT: %v", err)
 	}
 	return userID, nil
+}
+
+func GetBearerToken(headers http.Header) (string, error) {
+	rawAuthToken := headers.Get("Authorization")
+	if rawAuthToken == "" {
+		return "", errors.New("Couldn't find authorization token")
+	}
+	if !strings.HasPrefix(rawAuthToken, "Bearer ") {
+		return "", errors.New("Authorization token must start with 'Bearer '")
+	}
+	authToken := strings.TrimSpace(strings.TrimPrefix(rawAuthToken, "Bearer "))
+	return authToken, nil
 }
