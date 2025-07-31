@@ -2,7 +2,10 @@ package auth
 
 import (
 	"fmt"
+	"time"
 
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -20,4 +23,36 @@ func CheckPasswordHash(password, hash string) error {
 		return fmt.Errorf("Password does not match")
 	}
 	return nil
+}
+
+func MakeJWT(userID uuid.UUID, tokenSecret string, expiresIn time.Duration) (string, error) {
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{
+		Issuer:    "chirpy",
+		IssuedAt:  jwt.NewNumericDate(time.Now()),
+		ExpiresAt: jwt.NewNumericDate(time.Now().Add(expiresIn)),
+		Subject:   userID.String(),
+	})
+	signature, err := token.SignedString([]byte(tokenSecret))
+	if err != nil {
+		return "", fmt.Errorf("Couldn't sign JWT: %v", err)
+	}
+	return signature, nil
+}
+
+func ValidateJWT(tokenString, tokenSecret string) (uuid.UUID, error) {
+	claim := jwt.RegisteredClaims{}
+	token, err := jwt.ParseWithClaims(tokenString, &claim, func(token *jwt.Token) (interface{}, error) {
+		return []byte(tokenSecret), nil
+	})
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("Couldn't parse JWT: %v", err)
+	}
+	if !token.Valid {
+		return uuid.Nil, fmt.Errorf("JWT is invalid")
+	}
+	userID, err := uuid.Parse(claim.Subject)
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("Couldn't parse user ID from JWT: %v", err)
+	}
+	return userID, nil
 }
