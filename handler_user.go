@@ -17,6 +17,60 @@ type User struct {
 	Email     string    `json:"email"`
 }
 
+func (cfg *apiConfig) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
+	type parameters struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+	type response struct {
+		User
+	}
+	decoder := json.NewDecoder(r.Body)
+	params := parameters{}
+	if err := decoder.Decode(&params); err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Couldn't decode parameters", err)
+		return
+	}
+	tokenJWT, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Couldn't get JWT token", err)
+		return
+	}
+	tokenUserID, err := auth.ValidateJWT(tokenJWT, cfg.JWTSecret)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Invalid JWT token", err)
+		return
+	}
+	user, err := cfg.db.GetUserByID(r.Context(), tokenUserID)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Invalid user name or email", err)
+		return
+	}
+	hashPassword, err := auth.HashPassword(params.Password)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Couldn't hash password", err)
+		return
+	}
+
+	newUser, err := cfg.db.UpdateUser(r.Context(), database.UpdateUserParams{
+		ID:             user.ID,
+		Email:          params.Email,
+		HashedPassword: hashPassword,
+	})
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Couldn't update user", err)
+		return
+	}
+	respondWithJSON(w, http.StatusOK, response{
+		User: User{
+			ID:        newUser.ID,
+			CreatedAt: newUser.CreatedAt,
+			UpdatedAt: newUser.UpdatedAt,
+			Email:     newUser.Email,
+		},
+	})
+}
+
 func (cfg *apiConfig) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
 		Email    string `json:"email"`
