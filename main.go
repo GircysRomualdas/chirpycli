@@ -27,6 +27,11 @@ func main() {
 		fmt.Println("JWT_SECRET environment variable not set")
 		return
 	}
+	PolkaKey := os.Getenv("POLKA_KEY")
+	if PolkaKey == "" {
+		fmt.Println("POLKA_KEY environment variable not set")
+		return
+	}
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
 		fmt.Println("Error opening database:", err)
@@ -36,6 +41,7 @@ func main() {
 	apiCfg := apiConfig{
 		db:        dbQueries,
 		JWTSecret: JWTSecret,
+		PolkaKey:  PolkaKey,
 	}
 	mux := http.NewServeMux()
 	mux.Handle("/app/", apiCfg.middlewareMetricsInc(http.StripPrefix("/app/", http.FileServer(http.Dir(".")))))
